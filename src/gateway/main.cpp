@@ -12,6 +12,9 @@
 #include <QuickEspNow.h>
 #include <AsyncMqttClient.h>
 #include <Ticker.h>
+#include <nlohmann/json.hpp>
+using json = nlohmann::json;
+
 
 #include "ESPNow-MQTT.h"
 #include "secrets.h"
@@ -78,11 +81,19 @@ void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi
 
     memcpy(&rcvd_data, data, min((unsigned int)len, sizeof(rcvd_data)));
     
+    json json_message;
+    json_message["rssi"] = rssi;
+    json_message["battery_level"] = rcvd_data.batteryLevel;
+    json_message["wakeupCause"] = rcvd_data.wakeupCause;
+    json_message["sensor1"] = rcvd_data.sensor1;
+    json_message["sensor2"] = rcvd_data.sensor2;
+    json_message["sensor3"] = rcvd_data.sensor3;
+    std::string mqttMsg = json_message.dump();
 
     String topic(TOPIC_ROOT);
     topic.concat(macStr);
 
-    mqttClient.publish(topic.c_str(), 0, false, (const char *)data, len);
+    mqttClient.publish(topic.c_str(), 0, false, mqttMsg.c_str(), mqttMsg.length());
   }
 }
 

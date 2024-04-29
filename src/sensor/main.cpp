@@ -41,13 +41,18 @@ void setup() {
   quickEspNow.begin(6);                                    // If you use no connected WiFi channel needs to be specified
 }
 
-static const String msg = "Hello ESP-NOW!";
 
 void loop() {
     static unsigned int counter = 0;
 
-    String message = String (msg) + " " + String (counter++);
-    if (!quickEspNow.send (ESPNOW_BROADCAST_ADDRESS, (uint8_t*)message.c_str (), message.length ())) {
+    struct data msg;
+    msg.batteryLevel = counter++;
+    msg.wakeupCause = 1;
+    msg.sensor1 = 0;
+    msg.sensor2 = 0;
+    msg.sensor3 = 0;
+
+    if (!quickEspNow.send (ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg))) {
         Serial.println (">>>>>>>>>> Message sent");
     } else {
         Serial.println (">>>>>>>>>> Message not sent");
