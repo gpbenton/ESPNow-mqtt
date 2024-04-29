@@ -1,18 +1,60 @@
 #include <Arduino.h>
-#include "secrets.h"
-// put function declarations here:
-int myFunction(int, int);
+#if defined ESP32
+#include <WiFi.h>
+#include <esp_wifi.h>
+#elif defined ESP8266
+#include <ESP8266WiFi.h>
+#define WIFI_MODE_STA WIFI_STA 
+#else
+#error "Unsupported platform"
+#endif //ESP32
+#include <QuickEspNow.h>
 
-void setup() {
-  // put your setup code here, to run once:
-  int result = myFunction(2, 3);
+#include "ESPNow-MQTT.h"
+#include "secrets.h"
+
+// Send message every 2 seconds
+const unsigned int SEND_MSG_MSEC = 2000;
+
+void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
+  Serial.print("Received: ");
+  Serial.printf("%.*s\n", len, data);
+  Serial.printf("RSSI: %d dBm\n", rssi);
+  Serial.printf("From: " MACSTR "\n", MAC2STR(address));
+  Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
 }
 
+// put function declarations here:
+
+void setup() {
+  Serial.begin(115200);
+  WiFi.mode(WIFI_MODE_STA);
+#if defined ESP32
+  WiFi.disconnect(false, true);
+#elif defined ESP8266
+  WiFi.disconnect(false);
+#endif // ESP32
+  quickEspNow.onDataRcvd(dataReceived);
+#ifdef ESP32
+  quickEspNow.setWiFiBandwidth(WIFI_IF_STA, WIFI_BW_HT20); // Only needed for ESP32 in case you need coexistence with ESP8266 in the same network
+#endif                                                     // ESP32
+  quickEspNow.begin(6);                                    // If you use no connected WiFi channel needs to be specified
+}
+
+static const String msg = "Hello ESP-NOW!";
+
 void loop() {
-  // put your main code here, to run repeatedly:
+    static unsigned int counter = 0;
+
+    String message = String (msg) + " " + String (counter++);
+    if (!quickEspNow.send (ESPNOW_BROADCAST_ADDRESS, (uint8_t*)message.c_str (), message.length ())) {
+        Serial.println (">>>>>>>>>> Message sent");
+    } else {
+        Serial.println (">>>>>>>>>> Message not sent");
+    }
+
+    delay (SEND_MSG_MSEC);
+
 }
 
 // put function definitions here:
-int myFunction(int x, int y) {
-  return x + y;
-}

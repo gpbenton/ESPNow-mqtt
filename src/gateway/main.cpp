@@ -13,6 +13,7 @@
 #include <AsyncMqttClient.h>
 #include <Ticker.h>
 
+#include "ESPNow-MQTT.h"
 #include "secrets.h"
 
 AsyncMqttClient mqttClient;
@@ -56,18 +57,33 @@ void setup()
 }
 
 void loop() {
-  // put your main code here, to run repeatedly:
 }
 
 // put function definitions here:
 
-void dataReceived(uint8_t *address, uint8_t *data, uint8_t len, signed int rssi, bool broadcast)
+// Message received from ESPNow
+void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi, bool broadcast)
 {
   Serial.print("Received: ");
   Serial.printf("%.*s\n", len, data);
   Serial.printf("RSSI: %d dBm\n", rssi);
-  Serial.printf("From: " MACSTR "\n", MAC2STR(address));
+  Serial.printf("From: " MACSTR "\n", MAC2STR(mac_addr));
   Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
+  if (mqttClient.connected()) {
+    struct data rcvd_data;
+    char macStr[18];
+
+    snprintf(macStr, sizeof(macStr), "%02x%02x%02x%02x%02x%02x",
+           mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    memcpy(&rcvd_data, data, min((unsigned int)len, sizeof(rcvd_data)));
+    
+
+    String topic(TOPIC_ROOT);
+    topic.concat(macStr);
+
+    mqttClient.publish(topic.c_str(), 0, false, (const char *)data, len);
+  }
 }
 
 void connectToWifi() {
