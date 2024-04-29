@@ -11,12 +11,15 @@
 #endif //ESP32
 #include <QuickEspNow.h>
 #include <AsyncMqttClient.h>
+#include <Ticker.h>
 
 #include "secrets.h"
 
 AsyncMqttClient mqttClient;
 WiFiEventHandler wifiConnectHandler;
 WiFiEventHandler wifiDisconnectHandler;
+Ticker wifiReconnectTimer;
+Ticker mqttReconnectTimer;
 
 // put function declarations here:
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
@@ -82,8 +85,8 @@ void onWifiConnect(const WiFiEventStationModeGotIP& event) {
 
 void onWifiDisconnect(const WiFiEventStationModeDisconnected& event) {
   Serial.println("Disconnected from Wi-Fi.");
-  //mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
-  //wifiReconnectTimer.once(2, connectToWifi);
+  mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
+  wifiReconnectTimer.once(2, connectToWifi);
   quickEspNow.stop();
 }
 
@@ -113,7 +116,7 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
   Serial.println("Disconnected from MQTT.");
 
   if (WiFi.isConnected()) {
-    //mqttReconnectTimer.once(2, connectToMqtt);
+    mqttReconnectTimer.once(2, connectToMqtt);
   }
 }
 
