@@ -31,6 +31,9 @@ void gotoSleep(const long sleepTime);
 
 void setup() {
   Serial.begin(115200);
+  pinMode(BUILTIN_LED, OUTPUT);
+  digitalWrite(BUILTIN_LED, HIGH);
+
   wakeup_reason = esp_sleep_get_wakeup_cause();
   switch(wakeup_reason){
     //case ESP_SLEEP_WAKEUP_EXT0 : break;
@@ -80,8 +83,10 @@ void loop() {
       {
         Serial.println(">>>>>>>>>> Message not sent");
       }
+      msgSent = true;
     }
     if (responseRcvd) {
+      digitalWrite(BUILTIN_LED, LOW);
       gotoSleep(sleepTime);
     }
 }
@@ -111,7 +116,9 @@ void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi
 void dataAcked (uint8_t* address, uint8_t status) {
   Serial.printf("Acked From: " MACSTR "   ", MAC2STR(address));
   Serial.printf("Status: %d\n", status);
-  responseRcvd = true;
+  if (status == 0) {
+    responseRcvd = true;
+  }
 }
 
 void gotoSleep(long sleepTime){
