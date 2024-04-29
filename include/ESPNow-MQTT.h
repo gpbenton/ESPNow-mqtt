@@ -1,4 +1,5 @@
-
+#ifndef ESPNOW_MQTT_H
+#define ESPNOW_MQTT_H
 
 struct data {
     u_int64_t sensor1;
@@ -9,3 +10,5 @@ struct data {
 };
 
 #define TOPIC_ROOT "espnow/"
+
+#endif

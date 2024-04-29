@@ -16,15 +16,9 @@
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
 
-void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
-  Serial.print("Received: ");
-  Serial.printf("%.*s\n", len, data);
-  Serial.printf("RSSI: %d dBm\n", rssi);
-  Serial.printf("From: " MACSTR "\n", MAC2STR(address));
-  Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
-}
-
 // put function declarations here:
+int32_t getWiFiChannel(const char *ssid);
+void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
 
 void setup() {
   Serial.begin(115200);
@@ -38,7 +32,8 @@ void setup() {
 #ifdef ESP32
   quickEspNow.setWiFiBandwidth(WIFI_IF_STA, WIFI_BW_HT20); // Only needed for ESP32 in case you need coexistence with ESP8266 in the same network
 #endif                                                     // ESP32
-  quickEspNow.begin(6);                                    // If you use no connected WiFi channel needs to be specified
+  int sharedChannel = getWiFiChannel(WIFI_SSID); 
+  quickEspNow.begin(sharedChannel);                                    // If you use no connected WiFi channel needs to be specified
 }
 
 
@@ -63,3 +58,22 @@ void loop() {
 }
 
 // put function definitions here:
+//we can init our channel number from wifi ssid, but it consts seconds so only in case of restarting
+int32_t getWiFiChannel(const char *ssid) {
+  if (int32_t n = WiFi.scanNetworks()) {
+      for (uint8_t i=0; i<n; i++) {
+          if (!strcmp(ssid, WiFi.SSID(i).c_str())) {
+              return WiFi.channel(i);
+          }
+      }
+  }
+  return 0;
+}
+
+void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
+  Serial.print("Received: ");
+  Serial.printf("%.*s\n", len, data);
+  Serial.printf("RSSI: %d dBm\n", rssi);
+  Serial.printf("From: " MACSTR "\n", MAC2STR(address));
+  Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
+}
