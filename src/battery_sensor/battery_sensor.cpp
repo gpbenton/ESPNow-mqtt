@@ -26,7 +26,6 @@ const long sleepTime = 4000 * 1000L;
 // put function declarations here:
 int32_t getWiFiChannel(const char *ssid);
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
-void dataAcked (uint8_t* address, uint8_t status);
 void gotoSleep(const long sleepTime);
 
 void setup() {
@@ -54,41 +53,34 @@ void setup() {
   WiFi.disconnect(false);
 #endif // ESP32
   quickEspNow.onDataRcvd(dataReceived);
-  quickEspNow.onDataSent(dataAcked);
 #ifdef ESP32
   quickEspNow.setWiFiBandwidth(WIFI_IF_STA, WIFI_BW_HT20); // Only needed for ESP32 in case you need coexistence with ESP8266 in the same network
 #endif                                                     // ESP32
   quickEspNow.begin(sharedChannel);                        // If you use no connected WiFi channel needs to be specified
 }
 
+struct data msg;
 
 void loop() {
-    static uint8_t counter = 0;
+    static uint8_t retries = 0;
 
-    if (!msgSent)
+    msg.batteryLevel = retries++;
+    msg.wakeupCause = wakeup_reason;
+    msg.sensor1 = 0;
+    msg.sensor2 = 0;
+    msg.sensor3 = 0;
+
+    comms_send_error_t err = quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg));
+    if (!err)
     {
-
-      struct data msg;
-      msg.batteryLevel = counter++;
-      msg.wakeupCause = wakeup_reason;
-      msg.sensor1 = 0;
-      msg.sensor2 = 0;
-      msg.sensor3 = 0;
-
-      if (!quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg)))
-      {
-        Serial.println(">>>>>>>>>> Message sent");
-      }
-      else
-      {
-        Serial.println(">>>>>>>>>> Message not sent");
-      }
-      msgSent = true;
+      Serial.println(">>>>>>>>>> Message sent");
     }
-    if (responseRcvd) {
-      digitalWrite(BUILTIN_LED, LOW);
-      gotoSleep(sleepTime);
+    else
+    {
+      Serial.printf(">>>>>>>>>> Message not sent: %d (0x%x)\n", err, err);
     }
+
+    delay (SEND_MSG_MSEC);
 }
 
 // put function definitions here:
@@ -111,14 +103,6 @@ void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi
   Serial.printf("RSSI: %d dBm\n", rssi);
   Serial.printf("From: " MACSTR "\n", MAC2STR(address));
   Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
-}
-
-void dataAcked (uint8_t* address, uint8_t status) {
-  Serial.printf("Acked From: " MACSTR "   ", MAC2STR(address));
-  Serial.printf("Status: %d\n", status);
-  if (status == 0) {
-    responseRcvd = true;
-  }
 }
 
 void gotoSleep(long sleepTime){

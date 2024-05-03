@@ -11,4 +11,6 @@ struct data {
 
 #define TOPIC_ROOT "espnow/"
 
+const uint8_t GATEWAY_ADDRESS[] = { 0xDC, 0x4F, 0x22, 0x60, 0xAC, 0xAD };
+
 #endif
