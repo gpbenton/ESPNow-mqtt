@@ -16,12 +16,10 @@
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
 RTC_DATA_ATTR int sharedChannel = 0 ;
+RTC_DATA_ATTR int bootCount = 0;
 bool responseRcvd = false;
 bool msgSent = false;
-esp_sleep_wakeup_cause_t wakeup_reason;
-
-// For testing
-const long sleepTime = 4000 * 1000L;
+struct data msg;
 
 // put function declarations here:
 int32_t getWiFiChannel(const char *ssid);
@@ -30,17 +28,19 @@ void gotoSleep(const long sleepTime);
 
 void setup() {
   Serial.begin(115200);
-  pinMode(BUILTIN_LED, OUTPUT);
-  digitalWrite(BUILTIN_LED, HIGH);
+  delay(1000);
 
-  wakeup_reason = esp_sleep_get_wakeup_cause();
-  switch(wakeup_reason){
-    //case ESP_SLEEP_WAKEUP_EXT0 : break;
-    //case ESP_SLEEP_WAKEUP_EXT1 : break; 
+  msg.sensor2 = bootCount;
+  bootCount = bootCount + 1;
+  msg.wakeupCause = esp_sleep_get_wakeup_cause();
+
+  switch(msg.wakeupCause){
+    case ESP_SLEEP_WAKEUP_EXT0 : break;
+    case ESP_SLEEP_WAKEUP_EXT1 : break; 
     case ESP_SLEEP_WAKEUP_TIMER : 
+    case ESP_SLEEP_WAKEUP_TOUCHPAD : break;
+    case ESP_SLEEP_WAKEUP_ULP : break;
       break;
-    //case ESP_SLEEP_WAKEUP_TOUCHPAD : break;
-    //case ESP_SLEEP_WAKEUP_ULP : break;
     default:
       sharedChannel = getWiFiChannel(WIFI_SSID); 
       break;
@@ -59,21 +59,21 @@ void setup() {
   quickEspNow.begin(sharedChannel);                        // If you use no connected WiFi channel needs to be specified
 }
 
-struct data msg;
-
 void loop() {
+
     static uint8_t retries = 0;
 
-    msg.batteryLevel = retries++;
-    msg.wakeupCause = wakeup_reason;
-    msg.sensor1 = 0;
+    msg.batteryLevel = 50;
+    msg.sensor1 = sharedChannel;
     msg.sensor2 = 0;
     msg.sensor3 = 0;
-
-    comms_send_error_t err = quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg));
+    comms_send_error_t err = COMMS_SEND_OK;   //quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg));
     if (!err)
     {
-      Serial.println(">>>>>>>>>> Message sent");
+      sleep(5);
+      Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d   bootCount= %d\n", msg.wakeupCause, bootCount);
+      delay(1);
+      gotoSleep(10);
     }
     else
     {
@@ -81,6 +81,7 @@ void loop() {
     }
 
     delay (SEND_MSG_MSEC);
+
 }
 
 // put function definitions here:
@@ -106,7 +107,10 @@ void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi
 }
 
 void gotoSleep(long sleepTime){
-  
-  esp_sleep_enable_timer_wakeup(sleepTime);
+#define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
+
+  esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
+  delay(1000);
+  Serial.flush();
   esp_deep_sleep_start();
 }
