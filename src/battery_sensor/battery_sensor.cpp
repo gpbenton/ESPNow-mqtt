@@ -13,9 +13,11 @@
 #include "ESPNow-MQTT.h"
 #include "secrets.h"
 
-// Send message every 2 seconds
+#define DEBUG 
+// Repeat Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
-RTC_DATA_ATTR int sharedChannel = 0 ;
+RTC_NOINIT_ATTR int sharedChannel = 0;
+bool gettingChannel = false;
 RTC_DATA_ATTR int bootCount = 0;
 bool responseRcvd = false;
 bool msgSent = false;
@@ -27,60 +29,139 @@ void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi
 void gotoSleep(const long sleepTime);
 
 void setup() {
+#ifdef DEBUG
   Serial.begin(115200);
   delay(1000);
+#endif
 
   msg.sensor2 = bootCount;
   bootCount = bootCount + 1;
+#ifdef DEBUG
+  Serial.println("Getting Wakeup cause");
+#endif
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
 
-  switch(msg.wakeupCause){
-    case ESP_SLEEP_WAKEUP_EXT0 : break;
-    case ESP_SLEEP_WAKEUP_EXT1 : break; 
-    case ESP_SLEEP_WAKEUP_TIMER : 
-    case ESP_SLEEP_WAKEUP_TOUCHPAD : break;
-    case ESP_SLEEP_WAKEUP_ULP : break;
-      break;
-    default:
-      sharedChannel = getWiFiChannel(WIFI_SSID); 
-      break;
-  }
+#ifdef DEBUG
+  Serial.printf("Got Wakeup Cause %d\n", msg.wakeupCause);
+#endif
 
-  WiFi.mode(WIFI_MODE_STA);
-#if defined ESP32
-  WiFi.disconnect(false, true);
-#elif defined ESP8266
-  WiFi.disconnect(false);
-#endif // ESP32
-  quickEspNow.onDataRcvd(dataReceived);
-#ifdef ESP32
-  quickEspNow.setWiFiBandwidth(WIFI_IF_STA, WIFI_BW_HT20); // Only needed for ESP32 in case you need coexistence with ESP8266 in the same network
-#endif                                                     // ESP32
-  quickEspNow.begin(sharedChannel);                        // If you use no connected WiFi channel needs to be specified
 }
 
 void loop() {
 
-    static uint8_t retries = 0;
+  //if (msg.wakeupCause == 0) {
+  if (sharedChannel == 0) {
+#ifdef DEBUG
+      Serial.println("Scanning");
+      Serial.flush();
+#endif
+    sharedChannel = getWiFiChannel(WIFI_SSID);
+#ifdef DEBUG
+          Serial.printf("Found channel %d\n", sharedChannel);
+#endif
+#if 0
+    if (!gettingChannel) {
+#ifdef DEBUG
+      Serial.println("Scanning");
+#endif
+      WiFi.scanNetworks(true, false, false, 300U, 0U, WIFI_SSID);
+      gettingChannel = true;
+    } else{
+      int16_t i;
+      i = WiFi.scanComplete();
 
-    msg.batteryLevel = 50;
-    msg.sensor1 = sharedChannel;
-    msg.sensor2 = 0;
-    msg.sensor3 = 0;
-    comms_send_error_t err = COMMS_SEND_OK;   //quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg));
-    if (!err)
-    {
-      sleep(5);
-      Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d   bootCount= %d\n", msg.wakeupCause, bootCount);
-      delay(1);
-      gotoSleep(10);
+      switch (i) {
+        case WIFI_SCAN_FAILED:
+#ifdef DEBUG
+          Serial.printf("Error found Scanning %d\n", i);
+#endif
+          gettingChannel = false;
+          break;
+
+        case WIFI_SCAN_RUNNING:
+#ifdef DEBUG
+          Serial.printf("Still Scanning %d\n", i);
+#endif
+          break;
+        case 0:
+#ifdef DEBUG
+          Serial.printf("No networks found %d\n", i);
+#endif
+          gettingChannel = false;
+          break;
+        default:
+          sharedChannel = WiFi.channel(0);
+#ifdef DEBUG
+          Serial.printf("Found channel %d\n", sharedChannel);
+#endif
+          break;
+
+      }
     }
-    else
-    {
-      Serial.printf(">>>>>>>>>> Message not sent: %d (0x%x)\n", err, err);
+#endif
+  } 
+
+  if (sharedChannel != 0) {
+#ifdef DEBUG
+    Serial.printf("Using channel %d\n", sharedChannel);
+#endif
+    WiFi.begin(WIFI_SSID);
+#if defined ESP32
+    WiFi.disconnect(false, true);
+#elif defined ESP8266
+    WiFi.disconnect(false);
+#endif // ESP32
+    quickEspNow.onDataRcvd(dataReceived);
+#ifdef ESP32
+    quickEspNow.setWiFiBandwidth(WIFI_IF_STA, WIFI_BW_HT20); // Only needed for ESP32 in case you need coexistence with ESP8266 in the same network
+#endif                                                     // ESP32
+    if (quickEspNow.begin(sharedChannel)) {                        // If you use no connected WiFi channel needs to be specified
+#ifdef DEBUG
+      Serial.println("quickEsp started");
+#endif
+
+      msg.batteryLevel = 50;
+      msg.sensor1 = sharedChannel;
+      msg.sensor2 = bootCount;
+      msg.sensor3 = 0;
+
+
+#ifdef DEBUG
+      Serial.printf("Sending message now on channel %d\n", sharedChannel);
+      Serial.flush();
+#endif
+      comms_send_error_t err = quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, (const unsigned char *)&msg, sizeof(msg));
+      if (!err)
+      {
+#ifdef DEBUG
+        Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d   bootCount= %d\n", msg.wakeupCause, bootCount);
+#endif
+        gotoSleep(10);
+      } else {
+#ifdef DEBUG
+        Serial.printf(">>>>>>>>>> Message not sent: %d (0x%x)\n", err, err);
+#endif
+
+      }
+    } else {
+#ifdef DEBUG
+      Serial.println("quickEsp.begin failed");
+#endif
+
     }
 
-    delay (SEND_MSG_MSEC);
+  }
+
+#ifdef DEBUG
+  Serial.printf("Restarting loop\n");
+#endif
+
+  delay (SEND_MSG_MSEC);
+#ifdef DEBUG
+      Serial.println("Scanning at end");
+      Serial.flush();
+#endif
+  sharedChannel = getWiFiChannel(WIFI_SSID);
 
 }
 
@@ -99,18 +180,22 @@ int32_t getWiFiChannel(const char *ssid) {
 }
 
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
+#ifdef DEBUG
+  Serial.println("Got Wakedup Cause");
   Serial.print("Received: ");
   Serial.printf("%.*s\n", len, data);
   Serial.printf("RSSI: %d dBm\n", rssi);
   Serial.printf("From: " MACSTR "\n", MAC2STR(address));
   Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
+#endif
 }
 
 void gotoSleep(long sleepTime){
 #define uS_TO_S_FACTOR 1000000  /* Conversion factor for micro seconds to seconds */
 
   esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
-  delay(1000);
+#ifdef DEBUG
   Serial.flush();
+#endif
   esp_deep_sleep_start();
 }
