@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"name": "QuickESPNow",
+			"path": "../QuickESPNow"
+		},
+		{
+			"name": "ESPNow-MQTT",
+			"path": "."
+		}
+	],
+	"settings": {}
+}

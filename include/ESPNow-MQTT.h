@@ -13,4 +13,6 @@ struct data {
 
 const uint8_t GATEWAY_ADDRESS[] = { 0xDC, 0x4F, 0x22, 0x60, 0xAC, 0xAD };
 
+#define ESPN_CHANNEL 1
+
 #endif

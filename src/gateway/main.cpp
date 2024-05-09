@@ -1,3 +1,5 @@
+// Failed attempt at combining mqtt over WiFi and ESPNow on same chip.
+// This code works ok, but the lolin S2 nodes couldn't scan to find the channel for the WiFi network
 #include <Arduino.h>
 
 #if defined ESP32
