@@ -12,8 +12,7 @@
 #error "Unsupported platform"
 #endif //ESP32
 #include <QuickEspNow.h>
-#include <nlohmann/json.hpp>
-using json = nlohmann::json;
+#include <ArduinoJson.h>
 
 
 #include "ESPNow-MQTT.h"
@@ -33,11 +32,11 @@ void setup()
   WiFi.disconnect(false);
 #endif // ESP32
 
-  Serial.printf("Connected channel %d\n", WiFi.channel());
-  Serial.printf("MAC address: %s\n", WiFi.macAddress().c_str());
   quickEspNow.begin(ESPN_CHANNEL, 0, false);
   quickEspNow.onDataSent(dataSent);
   quickEspNow.onDataRcvd(dataReceived);
+  Serial.printf("Connected channel %d\n", WiFi.channel());
+  Serial.printf("MAC address: %s\n", WiFi.macAddress().c_str());
 }
 
 void loop() {
@@ -49,9 +48,9 @@ void loop() {
 void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi, bool broadcast)
 {
   Serial.print("Received: ");
-  Serial.printf("%.*s\n", len, data);
-  Serial.printf("RSSI: %d dBm\n", rssi);
-  Serial.printf("From: " MACSTR "\n", MAC2STR(mac_addr));
+  Serial.printf("length %d   ", len);
+  Serial.printf("RSSI: %d dBm   ", rssi);
+  Serial.printf("From: " MACSTR "   ", MAC2STR(mac_addr));
   Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
     struct data rcvd_data;
     char macStr[18];
@@ -61,6 +60,7 @@ void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi
 
     memcpy(&rcvd_data, data, min((unsigned int)len, sizeof(rcvd_data)));
     
+#if 0
     json json_message;
     json_message["rssi"] = rssi;
     json_message["battery_level"] = rcvd_data.batteryLevel;
@@ -69,6 +69,19 @@ void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi
     json_message["sensor2"] = rcvd_data.sensor2;
     json_message["sensor3"] = rcvd_data.sensor3;
     std::string mqttMsg = json_message.dump();
+#else
+    JsonDocument json_message;
+    json_message[0]["rssi"] = rssi;
+    json_message[0]["battery_level"] = rcvd_data.batteryLevel;
+    json_message[0]["wakeupCause"] = rcvd_data.wakeupCause;
+    json_message[0]["sensor1"] = rcvd_data.sensor1;
+    json_message[0]["sensor2"] = rcvd_data.sensor2;
+    json_message[0]["sensor3"] = rcvd_data.sensor3;
+
+    serializeJson(json_message, Serial);
+
+    Serial.println();
+#endif
 
     String topic(TOPIC_ROOT);
     topic.concat(macStr);

@@ -55,7 +55,6 @@ void loop() {
     //comms_send_error_t err = quickEspNow.sendBcast((const unsigned char *)&msg, sizeof(msg));
     if (!err)
     {
-      sleep(5);
       Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d   \n", msg.wakeupCause );
       delay(1);
       gotoSleep(5);
