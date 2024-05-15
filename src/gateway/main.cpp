@@ -27,6 +27,7 @@ Ticker mqttReconnectTimer;
 
 // put function declarations here:
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
+void dataSent(uint8_t *mac_addr, uint8_t status);
 void connectToWifi();
 void onWifiConnect(const WiFiEventStationModeGotIP& event);
 void onWifiDisconnect(const WiFiEventStationModeDisconnected& event);
@@ -54,6 +55,7 @@ void setup()
   mqttClient.setServer(MQTT_HOST, MQTT_PORT);
 
   quickEspNow.onDataRcvd(dataReceived);
+  quickEspNow.onDataSent(dataSent);
 
   WiFi.mode(WIFI_MODE_STA);
   connectToWifi();
@@ -63,6 +65,10 @@ void loop() {
 }
 
 // put function definitions here:
+void dataSent(uint8_t *mac_addr, uint8_t status) {
+  Serial.printf("dataSent to " MACSTR "  status %d\n", MAC2STR(mac_addr), status);
+
+}
 
 // Message received from ESPNow
 void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi, bool broadcast)
@@ -72,7 +78,15 @@ void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi
   Serial.printf("RSSI: %d dBm\n", rssi);
   Serial.printf("From: " MACSTR "\n", MAC2STR(mac_addr));
   Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
-  if (mqttClient.connected()) {
+
+  if (broadcast) {
+    if (!strncmp((const char *)data, (const char *)GATEWAY_QUERY, sizeof(GATEWAY_QUERY))) {
+      Serial.printf("Sending whois response\n" );
+      quickEspNow.send(mac_addr, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
+      Serial.printf("Sent whois response\n" );
+    }
+
+  } else if (mqttClient.connected()) {
     struct data rcvd_data;
     char macStr[18];
 
@@ -107,7 +121,7 @@ void onWifiConnect(const WiFiEventStationModeGotIP& event) {
   Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
   Serial.printf("MAC address: %s\n", WiFi.macAddress().c_str());
   connectToMqtt();
-  quickEspNow.begin(); // Use no parameters to start ESP-NOW on same channel as WiFi, in STA mode and synchronous send mode
+  quickEspNow.begin(255U, 0U, false); // Use no parameters to start ESP-NOW on same channel as WiFi, in STA mode and synchronous send mode
 }
 
 void onWifiDisconnect(const WiFiEventStationModeDisconnected& event) {
