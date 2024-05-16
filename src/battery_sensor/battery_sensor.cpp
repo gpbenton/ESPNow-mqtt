@@ -18,7 +18,6 @@ const unsigned int SEND_MSG_MSEC = 2000;
 const unsigned int WHOIS_RETRY_LIMIT = 5;
 RTC_DATA_ATTR int sharedChannel = 0 ;
 RTC_DATA_ATTR uint8_t gateway_address[6];
-RTC_DATA_ATTR int bootCount = 0;
 bool responseRcvd = false;
 bool msgSent = false;
 bool haveAddress = false;
@@ -33,8 +32,6 @@ void setup() {
   Serial.begin(115200);
   delay(1000);
 
-  msg.sensor2 = bootCount;
-  bootCount = bootCount + 1;
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
 
   switch(msg.wakeupCause){
@@ -76,7 +73,7 @@ void loop() {
   msg.sensor2 = 0;
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char *)&msg, sizeof(msg))) {
-    Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d   bootCount= %d\n", msg.wakeupCause, bootCount);
+    Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d\n", msg.wakeupCause);
     gotoSleep(10);
   }
   else {
