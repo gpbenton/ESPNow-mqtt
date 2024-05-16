@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <QuickDebug.h>
 
 #if defined ESP32
 #include <WiFi.h>
@@ -24,6 +25,9 @@ WiFiEventHandler wifiConnectHandler;
 WiFiEventHandler wifiDisconnectHandler;
 Ticker wifiReconnectTimer;
 Ticker mqttReconnectTimer;
+
+// For quickdebug
+static const char* TAG = "gateway";
 
 // put function declarations here:
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
@@ -66,24 +70,22 @@ void loop() {
 
 // put function definitions here:
 void dataSent(uint8_t *mac_addr, uint8_t status) {
-  Serial.printf("dataSent to " MACSTR "  status %d\n", MAC2STR(mac_addr), status);
+  DEBUG_DBG(TAG, "dataSent to " MACSTR "  status %d\n", MAC2STR(mac_addr), status);
 
 }
 
 // Message received from ESPNow
 void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi, bool broadcast)
 {
-  Serial.print("Received: ");
-  Serial.printf("%.*s\n", len, data);
-  Serial.printf("RSSI: %d dBm\n", rssi);
-  Serial.printf("From: " MACSTR "\n", MAC2STR(mac_addr));
-  Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
+  DEBUG_INFO(TAG, "Received From: " MACSTR , MAC2STR(mac_addr));
+  DEBUG_DBG(TAG, "RSSI: %d dBm", rssi);
+  DEBUG_DBG(TAG, "%s", broadcast ? "Broadcast" : "Unicast");
 
   if (broadcast) {
     if (!strncmp((const char *)data, (const char *)GATEWAY_QUERY, sizeof(GATEWAY_QUERY))) {
-      Serial.printf("Sending whois response\n" );
+      DEBUG_DBG(TAG, "Sending whois response\n" );
       quickEspNow.send(mac_addr, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
-      Serial.printf("Sent whois response\n" );
+      DEBUG_DBG(TAG, "Sent whois response\n" );
     }
 
   } else if (mqttClient.connected()) {
@@ -112,49 +114,37 @@ void dataReceived(uint8_t *mac_addr, uint8_t *data, uint8_t len, signed int rssi
 }
 
 void connectToWifi() {
-  Serial.println("Connecting to Wi-Fi...");
+  DEBUG_DBG(TAG, "Connecting to Wi-Fi...");
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void onWifiConnect(const WiFiEventStationModeGotIP& event) {
-  Serial.printf("Connected to %s in channel %d\n", WiFi.SSID().c_str(), WiFi.channel());
-  Serial.printf("IP address: %s\n", WiFi.localIP().toString().c_str());
-  Serial.printf("MAC address: %s\n", WiFi.macAddress().c_str());
+  DEBUG_INFO(TAG, "Connected to %s in channel %d\n", WiFi.SSID().c_str(), WiFi.channel());
+  DEBUG_DBG(TAG, "IP address: %s\n", WiFi.localIP().toString().c_str());
+  DEBUG_DBG(TAG, "MAC address: %s\n", WiFi.macAddress().c_str());
   connectToMqtt();
   quickEspNow.begin(255U, 0U, false); // Use no parameters to start ESP-NOW on same channel as WiFi, in STA mode and synchronous send mode
 }
 
 void onWifiDisconnect(const WiFiEventStationModeDisconnected& event) {
-  Serial.println("Disconnected from Wi-Fi.");
+  DEBUG_WARN(TAG, "Disconnected from Wi-Fi.");
   mqttReconnectTimer.detach(); // ensure we don't reconnect to MQTT while reconnecting to Wi-Fi
   wifiReconnectTimer.once(2, connectToWifi);
   quickEspNow.stop();
 }
 
 void connectToMqtt() {
-  Serial.println("Connecting to MQTT...");
+  DEBUG_DBG(TAG, "Connecting to MQTT...");
   mqttClient.connect();
 }
 
 void onMqttConnect(bool sessionPresent) {
-  Serial.println("Connected to MQTT.");
-  Serial.print("Session present: ");
-  Serial.println(sessionPresent);
-  uint16_t packetIdSub = mqttClient.subscribe("test/lol", 2);
-  Serial.print("Subscribing at QoS 2, packetId: ");
-  Serial.println(packetIdSub);
-  mqttClient.publish("test/lol", 0, true, "test 1");
-  Serial.println("Publishing at QoS 0");
-  uint16_t packetIdPub1 = mqttClient.publish("test/lol", 1, true, "test 2");
-  Serial.print("Publishing at QoS 1, packetId: ");
-  Serial.println(packetIdPub1);
-  uint16_t packetIdPub2 = mqttClient.publish("test/lol", 2, true, "test 3");
-  Serial.print("Publishing at QoS 2, packetId: ");
-  Serial.println(packetIdPub2);
+  DEBUG_INFO(TAG, "Connected to MQTT.");
+  DEBUG_DBG(TAG, "Session present: %d", sessionPresent);
 }
 
 void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
-  Serial.println("Disconnected from MQTT.");
+  DEBUG_WARN(TAG, "Disconnected from MQTT.");
 
   if (WiFi.isConnected()) {
     mqttReconnectTimer.once(2, connectToMqtt);
@@ -162,39 +152,28 @@ void onMqttDisconnect(AsyncMqttClientDisconnectReason reason) {
 }
 
 void onMqttSubscribe(uint16_t packetId, uint8_t qos) {
-  Serial.println("Subscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
-  Serial.print("  qos: ");
-  Serial.println(qos);
+  DEBUG_DBG(TAG, "Subscribe acknowledged.");
+  DEBUG_DBG(TAG, "  packetId: %d", packetId);
+  DEBUG_DBG(TAG, "  qos: %d", qos);
 }
 
 void onMqttUnsubscribe(uint16_t packetId) {
-  Serial.println("Unsubscribe acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
+  DEBUG_DBG(TAG, "Unsubscribe acknowledged.");
+  DEBUG_DBG(TAG, "  packetId: %d", packetId);
 }
 
 void onMqttMessage(char* topic, char* payload, AsyncMqttClientMessageProperties properties, size_t len, size_t index, size_t total) {
-  Serial.println("Publish received.");
-  Serial.print("  topic: ");
-  Serial.println(topic);
-  Serial.print("  qos: ");
-  Serial.println(properties.qos);
-  Serial.print("  dup: ");
-  Serial.println(properties.dup);
-  Serial.print("  retain: ");
-  Serial.println(properties.retain);
-  Serial.print("  len: ");
-  Serial.println(len);
-  Serial.print("  index: ");
-  Serial.println(index);
-  Serial.print("  total: ");
-  Serial.println(total);
+  DEBUG_DBG(TAG, "Publish received.");
+  DEBUG_DBG(TAG, "  topic: %s", topic);
+  DEBUG_DBG(TAG, "  qos: %d", properties.qos);
+  DEBUG_DBG(TAG, "  dup: %d", properties.dup);
+  DEBUG_DBG(TAG, "  retain: %d", properties.retain);
+  DEBUG_DBG(TAG, "  len: %d", len);
+  DEBUG_DBG(TAG, "  index: %d", index);
+  DEBUG_DBG(TAG, "  total: %d", total);
 }
 
 void onMqttPublish(uint16_t packetId) {
-  Serial.println("Publish acknowledged.");
-  Serial.print("  packetId: ");
-  Serial.println(packetId);
+  DEBUG_DBG(TAG, "Publish acknowledged.");
+  DEBUG_DBG(TAG, "  packetId: %d", packetId);
 }
