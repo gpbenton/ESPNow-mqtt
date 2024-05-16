@@ -5,7 +5,6 @@ Alpha - basic principle works with wemos_d1_mini and wemos_d1_minis32
 
 TODO:
 - Get lolin S2 mini to work
-- Broadcast mac address from gateway to pick up by sensors
 - ...
 
 
