@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <QuickDebug.h>
 #if defined ESP32
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -12,6 +13,9 @@
 
 #include "ESPNow-MQTT.h"
 #include "secrets.h"
+
+// For quickdebug
+static const char* TAG = "sensor";
 
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
@@ -53,10 +57,10 @@ void loop() {
     msg.sensor3 = 0;
 
     if (haveAddress && !quickEspNow.send (gateway_address, (const unsigned char *)&msg, sizeof(msg))) {
-        Serial.println (">>>>>>>>>> Message sent");
+        DEBUG_DBG(TAG,"Message sent");
     } else {
+        DEBUG_ERROR(TAG," Message not sent");
         quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
-        Serial.println (">>>>>>>>>> Message not sent");
     }
 
     delay (SEND_MSG_MSEC);
@@ -77,13 +81,13 @@ int32_t getWiFiChannel(const char *ssid) {
 }
 
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
-  Serial.printf("Received From: " MACSTR "    ", MAC2STR(address));
-  Serial.printf("%d bytes   ", len);
-  Serial.printf("RSSI: %d dBm    ", rssi);
-  Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
+  DEBUG_DBG(TAG,"Received From: " MACSTR "    ", MAC2STR(address));
+  DEBUG_DBG(TAG,"%d bytes   ", len);
+  DEBUG_DBG(TAG,"RSSI: %d dBm    ", rssi);
+  DEBUG_DBG(TAG,"%s\n", broadcast ? "Broadcast" : "Unicast");
 
   if (!broadcast && !strncmp((const char *)data, (const char *)GATEWAY_QUERY, sizeof(GATEWAY_QUERY))) {
-    Serial.printf("Setting gateway address to " MACSTR, MAC2STR(address));
+    DEBUG_WARN(TAG, "Setting gateway address to " MACSTR, MAC2STR(address));
     for (int i=0; i<6; i++) {
       gateway_address[i] = address[i];
     }
