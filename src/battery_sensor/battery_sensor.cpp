@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <QuickDebug.h>
 #if defined ESP32
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -12,6 +13,9 @@
 
 #include "ESPNow-MQTT.h"
 #include "secrets.h"
+
+// For quickdebug
+static const char* TAG = "battery_sensor";
 
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
@@ -44,9 +48,9 @@ void setup() {
       break;
     default:
       // Power Up or reset so find correct channel
-      Serial.printf("Finding channel.  Wakeup cause %d\n", msg.wakeupCause);
+      DEBUG_DBG(TAG, "Finding channel.  Wakeup cause %d\n", msg.wakeupCause);
       sharedChannel = getWiFiChannel(WIFI_SSID); 
-      Serial.printf("sharedChannel = %d\n", sharedChannel);
+      DEBUG_DBG(TAG, "sharedChannel = %d\n", sharedChannel);
       haveAddress = false;
       break;
   }
@@ -73,22 +77,22 @@ void loop() {
   msg.sensor2 = 0;
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char *)&msg, sizeof(msg))) {
-    Serial.printf(">>>>>>>>>> Message sent: wakeCause = %d\n", msg.wakeupCause);
+    DEBUG_DBG(TAG, " Message sent: wakeCause = %d\n", msg.wakeupCause);
     gotoSleep(10);
   }
   else {
-    Serial.printf(">>>>>>>>>> Message send failed\n");
+    DEBUG_DBG(TAG, " Message send failed\n");
     haveAddress = false;
 
     // look for the gateway on this channel
     if (whoisretries < WHOIS_RETRY_LIMIT) {
-      Serial.printf("Sending Gateway query\n");
+      DEBUG_INFO(TAG, "Sending Gateway query\n");
       quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
       whoisretries++;
     }
     else {
       // No gateway on this channel, look for the network id
-      Serial.printf("Searching for WiFi Channel\n");
+      DEBUG_INFO(TAG, "Searching for WiFi Channel\n");
       sharedChannel = getWiFiChannel(WIFI_SSID);
       whoisretries = 0;
     }
@@ -112,18 +116,16 @@ int32_t getWiFiChannel(const char *ssid) {
 }
 
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
-  Serial.print("Received: ");
-  Serial.printf("%.*s\n", len, data);
-  Serial.printf("RSSI: %d dBm\n", rssi);
-  Serial.printf("From: " MACSTR "\n", MAC2STR(address));
-  Serial.printf("%s\n", broadcast ? "Broadcast" : "Unicast");
+  DEBUG_INFO(TAG, "Received From: " MACSTR "\n", MAC2STR(address));
+  DEBUG_DBG(TAG, "RSSI: %d dBm\n", rssi);
+  DEBUG_DBG(TAG, "%s\n", broadcast ? "Broadcast" : "Unicast");
 
   if (!broadcast && !strncmp((const char *)data, (const char *)GATEWAY_QUERY, sizeof(GATEWAY_QUERY))) {
-    Serial.printf("Setting gateway address to " MACSTR "\n", MAC2STR(address));
+    DEBUG_DBG(TAG, "Setting gateway address to " MACSTR "\n", MAC2STR(address));
     for (int i=0; i<6; i++) {
       gateway_address[i] = address[i];
     }
-    Serial.printf("gateway_address = " MACSTR "\n", MAC2STR(gateway_address));
+    DEBUG_DBG(TAG, "gateway_address = " MACSTR "\n", MAC2STR(gateway_address));
     haveAddress = true;
   }
 }
