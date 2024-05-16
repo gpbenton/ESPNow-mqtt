@@ -34,7 +34,6 @@ void gotoSleep(const long sleepTime);
 
 void setup() {
   Serial.begin(115200);
-  delay(1000);
 
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
 
