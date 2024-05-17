@@ -20,6 +20,7 @@ static const char* TAG = "battery_sensor";
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
 const unsigned int WHOIS_RETRY_LIMIT = 5;
+const uint8_t battery_sensor_pin = 3;
 RTC_DATA_ATTR int sharedChannel = 0 ;
 RTC_DATA_ATTR uint8_t gateway_address[6];
 bool responseRcvd = false;
@@ -34,6 +35,7 @@ void gotoSleep(const long sleepTime);
 
 void setup() {
   Serial.begin(115200);
+  analogReadResolution(9);
 
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
 
@@ -71,7 +73,8 @@ void loop() {
 
   static uint8_t whoisretries = 0;
 
-  msg.batteryLevel = whoisretries;
+  msg.batteryLevel = analogReadMilliVolts(battery_sensor_pin);
+  DEBUG_DBG(TAG, "batteryLevel = %d", msg.batteryLevel);
   msg.sensor1 = sharedChannel;
   msg.sensor2 = 0;
   msg.sensor3 = 0;
