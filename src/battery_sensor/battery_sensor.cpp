@@ -80,7 +80,7 @@ void loop() {
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char *)&msg, sizeof(msg))) {
     DEBUG_DBG(TAG, " Message sent: wakeCause = %d\n", msg.wakeupCause);
-    gotoSleep(10);
+    gotoSleep(600);
   }
   else {
     DEBUG_DBG(TAG, " Message send failed\n");
