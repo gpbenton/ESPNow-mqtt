@@ -20,21 +20,23 @@ static const char* TAG = "battery_sensor";
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
 const unsigned int WHOIS_RETRY_LIMIT = 5;
-const uint8_t battery_sensor_pin = 3;
+const gpio_num_t battery_sensor_pin = GPIO_NUM_3;
+const gpio_num_t sensor1_pin = GPIO_NUM_18;
 RTC_DATA_ATTR int sharedChannel = 0;
 RTC_DATA_ATTR uint8_t gateway_address[6];
-bool responseRcvd = false;
-bool msgSent = false;
 bool haveAddress = false;
 struct data msg;
 
 // put function declarations here:
 int32_t getWiFiChannel(const char* ssid);
 void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
-void gotoSleep(const long sleepTime);
+void gotoSleep(const long sleepTime, gpio_num_t wakeupPin, uint8_t level);
 
 void setup() {
+#if CORE_DEBUG_LEVEL > 0
   Serial.begin(115200);
+  setTagDebugLevel(TAG, CORE_DEBUG_LEVEL);
+#endif
   analogReadResolution(9);
 
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
@@ -76,12 +78,12 @@ void loop() {
 
   msg.batteryLevel = analogReadMilliVolts(battery_sensor_pin);
   DEBUG_DBG(TAG, "batteryLevel = %d", msg.batteryLevel);
-  msg.sensor1 = sharedChannel;
+  msg.sensor1 = digitalRead(sensor1_pin);
   msg.sensor2 = 0;
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
     DEBUG_DBG(TAG, " Message sent: wakeCause = %d\n", msg.wakeupCause);
-    gotoSleep(600);
+    gotoSleep(600, sensor1_pin, msg.sensor1 ? 0 : 1);
   } else {
     DEBUG_DBG(TAG, " Message send failed\n");
     haveAddress = false;
@@ -133,10 +135,19 @@ void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi,
   }
 }
 
-void gotoSleep(long sleepTime) {
+void gotoSleep(long sleepTime, gpio_num_t wakeupPin, uint8_t level) {
 #define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
 
+#if 1
+  Serial.printf("Sleeping on pin %d at level %d\n", wakeupPin, level);
   esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
+  esp_sleep_enable_ext0_wakeup(wakeupPin, level);
+#if CORE_DEBUG_LEVEL > 0
   Serial.flush();
+#endif
   esp_deep_sleep_start();
+#else
+  DEBUG_DBG(TAG, "Sleeping");
+  sleep(sleepTime);
+#endif
 }
