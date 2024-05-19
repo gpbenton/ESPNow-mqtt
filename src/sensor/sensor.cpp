@@ -11,7 +11,7 @@
 #endif //ESP32
 #include <QuickEspNow.h>
 
-#include "ESPNow-MQTT.h"
+#include <ESPNow-MQTT.h>
 #include "secrets.h"
 
 // For quickdebug
@@ -24,7 +24,6 @@ uint8_t gateway_address[6];
 bool haveAddress = false;
 
 // put function declarations here:
-int32_t getWiFiChannel(const char *ssid);
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
 
 void setup() {
@@ -68,17 +67,6 @@ void loop() {
 }
 
 // put function definitions here:
-//we can init our channel number from wifi ssid, but it consts seconds so only in case of restarting
-int32_t getWiFiChannel(const char *ssid) {
-  if (int32_t n = WiFi.scanNetworks()) {
-      for (uint8_t i=0; i<n; i++) {
-          if (!strcmp(ssid, WiFi.SSID(i).c_str())) {
-              return WiFi.channel(i);
-          }
-      }
-  }
-  return 0;
-}
 
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
   DEBUG_DBG(TAG,"Received From: " MACSTR "    ", MAC2STR(address));

@@ -11,7 +11,7 @@
 #endif  // ESP32
 #include <QuickEspNow.h>
 
-#include "ESPNow-MQTT.h"
+#include <ESPNow-MQTT.h>
 #include "secrets.h"
 
 // For quickdebug
@@ -28,9 +28,7 @@ bool haveAddress = false;
 struct data msg;
 
 // put function declarations here:
-int32_t getWiFiChannel(const char* ssid);
 void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
-void gotoSleep(const long sleepTime, gpio_num_t wakeupPin, uint8_t level);
 
 void setup() {
 #if CORE_DEBUG_LEVEL > 0
@@ -108,17 +106,6 @@ void loop() {
 
 // we can init our channel number from wifi ssid, but it consts seconds so only in case of
 // restarting
-int32_t getWiFiChannel(const char* ssid) {
-  if (int32_t n = WiFi.scanNetworks()) {
-    for (uint8_t i = 0; i < n; i++) {
-      if (!strcmp(ssid, WiFi.SSID(i).c_str())) {
-        return WiFi.channel(i);
-      }
-    }
-  }
-  return 0;
-}
-
 void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
   DEBUG_INFO(TAG, "Received From: " MACSTR "\n", MAC2STR(address));
   DEBUG_DBG(TAG, "RSSI: %d dBm\n", rssi);
@@ -133,21 +120,4 @@ void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi,
     DEBUG_DBG(TAG, "gateway_address = " MACSTR "\n", MAC2STR(gateway_address));
     haveAddress = true;
   }
-}
-
-void gotoSleep(long sleepTime, gpio_num_t wakeupPin, uint8_t level) {
-#define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
-
-#if 1
-  Serial.printf("Sleeping on pin %d at level %d\n", wakeupPin, level);
-  esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
-  esp_sleep_enable_ext0_wakeup(wakeupPin, level);
-#if CORE_DEBUG_LEVEL > 0
-  Serial.flush();
-#endif
-  esp_deep_sleep_start();
-#else
-  DEBUG_DBG(TAG, "Sleeping");
-  sleep(sleepTime);
-#endif
 }
