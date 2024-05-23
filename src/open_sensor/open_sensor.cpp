@@ -57,9 +57,12 @@ void setup() {
   Serial.begin(115200);
   setTagDebugLevel(TAG, CORE_DEBUG_LEVEL);
 #endif
-  analogReadResolution(9);
+  analogReadResolution(10);
+  analogSetAttenuation(ADC_11db);
   pinMode(OPEN_SENSOR_PIN, INPUT_PULLUP);
+  pinMode(LIGHT_SENSOR_CONTROL_PIN, OUTPUT);
   pinMode(LIGHT_SENSOR_PIN, ANALOG);
+  pinMode(BATTERY_SENSOR_PIN, ANALOG);
 
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
 
