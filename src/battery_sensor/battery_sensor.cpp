@@ -20,12 +20,11 @@ static const char* TAG = "battery_sensor";
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
 const unsigned int WHOIS_RETRY_LIMIT = 5;
-const gpio_num_t battery_sensor_pin = GPIO_NUM_3;
-const gpio_num_t sensor1_pin = GPIO_NUM_18;
 RTC_DATA_ATTR int sharedChannel = 0;
 RTC_DATA_ATTR uint8_t gateway_address[6];
 bool haveAddress = false;
 struct data msg;
+const gpio_num_t sensor1_pin = GPIO_NUM_18;
 
 // put function declarations here:
 void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast);
@@ -36,6 +35,8 @@ void setup() {
   setTagDebugLevel(TAG, CORE_DEBUG_LEVEL);
 #endif
   analogReadResolution(9);
+  pinMode(sensor1_pin, INPUT_PULLUP);
+  pinMode(LIGHT_SENSOR_PIN, ANALOG);
 
   msg.wakeupCause = esp_sleep_get_wakeup_cause();
 
@@ -74,10 +75,11 @@ void setup() {
 void loop() {
   static uint8_t whoisretries = 0;
 
-  msg.batteryLevel = analogReadMilliVolts(battery_sensor_pin);
+  digitalWrite(LIGHT_SENSOR_CONTROL_PIN, HIGH);
+  msg.batteryLevel = analogReadMilliVolts(BATTERY_SENSOR_PIN);
   DEBUG_DBG(TAG, "batteryLevel = %d", msg.batteryLevel);
   msg.sensor1 = digitalRead(sensor1_pin);
-  msg.sensor2 = 0;
+  msg.sensor2 = analogRead(LIGHT_SENSOR_PIN);
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
     DEBUG_DBG(TAG, " Message sent: wakeCause = %d\n", msg.wakeupCause);

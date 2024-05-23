@@ -28,7 +28,12 @@ void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi
 
 void setup() {
   Serial.begin(115200);
+  setTagDebugLevel(TAG, CORE_DEBUG_LEVEL);
   WiFi.mode(WIFI_MODE_STA);
+  analogReadResolution(10);
+  analogSetAttenuation(ADC_11db);
+  pinMode(LIGHT_SENSOR_PIN, ANALOG);
+  pinMode(LIGHT_SENSOR_CONTROL_PIN, OUTPUT);
 #if defined ESP32
   WiFi.disconnect(false, true);
 #elif defined ESP8266
@@ -42,21 +47,24 @@ void setup() {
   quickEspNow.begin(sharedChannel);                                    // If you use no connected WiFi channel needs to be specified
 
   quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
+  Serial.printf("Gateway Query Sent\n");
 }
 
 
 void loop() {
-    static unsigned int counter = 0;
+  static unsigned int counter = 0;
 
-    struct data msg;
-    msg.batteryLevel = counter++;
-    msg.wakeupCause = 1;
-    msg.sensor1 = 0;
-    msg.sensor2 = 0;
-    msg.sensor3 = 0;
+  digitalWrite(LIGHT_SENSOR_CONTROL_PIN, HIGH);
+  struct data msg;
+  msg.batteryLevel = 0;
+  msg.wakeupCause = 0;
+  msg.sensor1 = 0;
+  msg.sensor2 = analogRead(LIGHT_SENSOR_PIN);
+  msg.sensor3 = 0;
+  digitalWrite(LIGHT_SENSOR_CONTROL_PIN, LOW);
 
-    if (haveAddress && !quickEspNow.send (gateway_address, (const unsigned char *)&msg, sizeof(msg))) {
-        DEBUG_DBG(TAG,"Message sent");
+  if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
+    DEBUG_DBG(TAG, "Message sent");
     } else {
         DEBUG_ERROR(TAG," Message not sent");
         quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
