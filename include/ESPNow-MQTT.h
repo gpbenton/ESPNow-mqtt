@@ -9,6 +9,9 @@
 #elif defined ESP8266
 #include <ESP8266WiFi.h>
 #define WIFI_MODE_STA WIFI_STA
+#define gpio_num_t uint8_t
+// TODO: Find pinModes for ESP8266
+#define ANALOG 0xC0   
 #else
 #error "Unsupported platform"
 #endif  // ESP32
@@ -29,6 +32,8 @@ const uint8_t GATEWAY_ADDRESS[] = { 0xDC, 0x4F, 0x22, 0x60, 0xAC, 0xAD };
 const uint8_t GATEWAY_QUERY[] = "whois_gateway";
 
 int32_t getWiFiChannel(const char* ssid);
+
+void initAnalogPin(gpio_num_t pin, gpio_num_t control_pin);
 
 #if defined ESP32
 void gotoSleep(const long sleepTime, gpio_num_t wakeupPin, uint8_t level);

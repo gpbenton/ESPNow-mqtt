@@ -35,7 +35,7 @@ LIGHT_SENSOR_CONROL_PIN __________________|/
 #endif  // ESP32
 #include <QuickEspNow.h>
 
-#include <ESPNow-MQTT.h>
+#include "ESPNow-MQTT.h"
 #include "secrets.h"
 
 // Send message every 2 seconds
@@ -58,8 +58,7 @@ void setup() {
   analogReadResolution(10);
   analogSetAttenuation(ADC_11db);
   pinMode(OPEN_SENSOR_PIN, INPUT_PULLUP);
-  pinMode(LIGHT_SENSOR_CONTROL_PIN, OUTPUT);
-  pinMode(LIGHT_SENSOR_PIN, ANALOG);
+  initAnalogPin(LIGHT_SENSOR_PIN, LIGHT_SENSOR_CONTROL_PIN);
   pinMode(BATTERY_SENSOR_PIN, ANALOG);
 
   msg.wakeupCause = esp_sleep_get_wakeup_cause();

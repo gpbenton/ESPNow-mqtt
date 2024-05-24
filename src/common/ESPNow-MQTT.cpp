@@ -22,9 +22,12 @@ void gotoSleep(long sleepTime, gpio_num_t wakeupPin, uint8_t level) {
   sleep(sleepTime);
 #endif
 }
-#else
-#warning "Deep Sleep Unsupported platform"
 #endif // ESP 32
+
+void initAnalogPin(gpio_num_t pin, gpio_num_t control_pin) {
+  pinMode(pin, ANALOG);
+  pinMode(control_pin, OUTPUT);
+}
 
 /**
  * getWiFiChannel - returns wifi channel being used by ssid

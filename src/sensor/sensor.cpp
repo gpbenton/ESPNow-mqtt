@@ -11,7 +11,7 @@
 #endif //ESP32
 #include <QuickEspNow.h>
 
-#include <ESPNow-MQTT.h>
+#include "ESPNow-MQTT.h"
 #include "secrets.h"
 
 // Send message every 2 seconds
@@ -31,8 +31,8 @@ void setup() {
   WiFi.mode(WIFI_MODE_STA);
   analogReadResolution(10);
   analogSetAttenuation(ADC_11db);
-  pinMode(LIGHT_SENSOR_PIN, ANALOG);
-  pinMode(LIGHT_SENSOR_CONTROL_PIN, OUTPUT);
+  initAnalogPin(LIGHT_SENSOR_PIN, LIGHT_SENSOR_CONTROL_PIN);
+
 #if defined ESP32
   WiFi.disconnect(false, true);
 #elif defined ESP8266
