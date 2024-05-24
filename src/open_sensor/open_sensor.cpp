@@ -23,7 +23,7 @@ LIGHT_SENSOR_CONROL_PIN __________________|/
 
 */
 #include <Arduino.h>
-#include <QuickDebug.h>
+
 #if defined ESP32
 #include <WiFi.h>
 #include <esp_wifi.h>
@@ -37,9 +37,6 @@ LIGHT_SENSOR_CONROL_PIN __________________|/
 
 #include <ESPNow-MQTT.h>
 #include "secrets.h"
-
-// For quickdebug
-static const char* TAG = "battery_sensor";
 
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
@@ -55,7 +52,8 @@ void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi,
 void setup() {
 #if CORE_DEBUG_LEVEL > 0
   Serial.begin(115200);
-  setTagDebugLevel(TAG, CORE_DEBUG_LEVEL);
+  Serial.setDebugOutput(true);
+  ets_set_printf_channel(0);
 #endif
   analogReadResolution(10);
   analogSetAttenuation(ADC_11db);
@@ -76,9 +74,9 @@ void setup() {
       break;
     default:
       // Power Up or reset so find correct channel
-      DEBUG_DBG(TAG, "Finding channel.  Wakeup cause %d\n", msg.wakeupCause);
+      log_d("Finding channel.  Wakeup cause %d\n", msg.wakeupCause);
       sharedChannel = getWiFiChannel(WIFI_SSID);
-      DEBUG_DBG(TAG, "sharedChannel = %d\n", sharedChannel);
+      log_d("sharedChannel = %d\n", sharedChannel);
       haveAddress = false;
       break;
   }
@@ -103,25 +101,25 @@ void loop() {
 
   digitalWrite(LIGHT_SENSOR_CONTROL_PIN, HIGH);
   msg.batteryLevel = analogReadMilliVolts(BATTERY_SENSOR_PIN);
-  DEBUG_DBG(TAG, "batteryLevel = %d", msg.batteryLevel);
+  log_d("batteryLevel = %d", msg.batteryLevel);
   msg.sensor1 = digitalRead(OPEN_SENSOR_PIN);
   msg.sensor2 = analogRead(LIGHT_SENSOR_PIN);
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
-    DEBUG_DBG(TAG, " Message sent: wakeCause = %d\n", msg.wakeupCause);
+    log_d(" Message sent: wakeCause = %d\n", msg.wakeupCause);
     gotoSleep(600, OPEN_SENSOR_PIN, msg.sensor1 ? 0 : 1);
   } else {
-    DEBUG_DBG(TAG, " Message send failed\n");
+    log_d(" Message send failed\n");
     haveAddress = false;
 
     // look for the gateway on this channel
     if (whoisretries < WHOIS_RETRY_LIMIT) {
-      DEBUG_INFO(TAG, "Sending Gateway query\n");
+      log_d("Sending Gateway query\n");
       quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
       whoisretries++;
     } else {
       // No gateway on this channel, look for the network id
-      DEBUG_INFO(TAG, "Searching for WiFi Channel\n");
+      log_i("Searching for WiFi Channel\n");
       sharedChannel = getWiFiChannel(WIFI_SSID);
       whoisretries = 0;
     }
@@ -135,17 +133,16 @@ void loop() {
 // we can init our channel number from wifi ssid, but it consts seconds so only in case of
 // restarting
 void dataReceived(uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
-  DEBUG_INFO(TAG, "Received From: " MACSTR "\n", MAC2STR(address));
-  DEBUG_DBG(TAG, "RSSI: %d dBm\n", rssi);
-  DEBUG_DBG(TAG, "%s\n", broadcast ? "Broadcast" : "Unicast");
+  log_d("Received From: " MACSTR "\n", MAC2STR(address));
+  log_v("RSSI: %d dBm\n", rssi);
+  log_v("%s\n", broadcast ? "Broadcast" : "Unicast");
 
   if (!broadcast &&
       !strncmp((const char*)data, (const char*)GATEWAY_QUERY, sizeof(GATEWAY_QUERY))) {
-    DEBUG_DBG(TAG, "Setting gateway address to " MACSTR "\n", MAC2STR(address));
+    log_i("Setting gateway address to " MACSTR "\n", MAC2STR(address));
     for (int i = 0; i < 6; i++) {
       gateway_address[i] = address[i];
     }
-    DEBUG_DBG(TAG, "gateway_address = " MACSTR "\n", MAC2STR(gateway_address));
     haveAddress = true;
   }
 }

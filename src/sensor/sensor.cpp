@@ -14,11 +14,8 @@
 #include <ESPNow-MQTT.h>
 #include "secrets.h"
 
-// For quickdebug
-static const char* TAG = "sensor";
-
 // Send message every 2 seconds
-const unsigned int SEND_MSG_MSEC = 2000;
+const unsigned int SEND_MSG_MSEC = 10000;
 
 uint8_t gateway_address[6];
 bool haveAddress = false;
@@ -28,7 +25,9 @@ void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi
 
 void setup() {
   Serial.begin(115200);
-  setTagDebugLevel(TAG, CORE_DEBUG_LEVEL);
+  Serial.setDebugOutput(true);
+  ets_set_printf_channel(0);
+
   WiFi.mode(WIFI_MODE_STA);
   analogReadResolution(10);
   analogSetAttenuation(ADC_11db);
@@ -47,7 +46,7 @@ void setup() {
   quickEspNow.begin(sharedChannel);                                    // If you use no connected WiFi channel needs to be specified
 
   quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
-  Serial.printf("Gateway Query Sent\n");
+  log_d("Gateway Query Sent");
 }
 
 
@@ -64,9 +63,9 @@ void loop() {
   digitalWrite(LIGHT_SENSOR_CONTROL_PIN, LOW);
 
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
-    DEBUG_DBG(TAG, "Message sent");
+    log_v("Message sent");
     } else {
-        DEBUG_ERROR(TAG," Message not sent");
+        log_e("Message not sent");
         quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
     }
 
@@ -77,13 +76,13 @@ void loop() {
 // put function definitions here:
 
 void dataReceived (uint8_t* address, uint8_t* data, uint8_t len, signed int rssi, bool broadcast) {
-  DEBUG_DBG(TAG,"Received From: " MACSTR "    ", MAC2STR(address));
-  DEBUG_DBG(TAG,"%d bytes   ", len);
-  DEBUG_DBG(TAG,"RSSI: %d dBm    ", rssi);
-  DEBUG_DBG(TAG,"%s\n", broadcast ? "Broadcast" : "Unicast");
+  log_d("Received From: " MACSTR "    ", MAC2STR(address));
+  log_d("%d bytes   ", len);
+  log_d("RSSI: %d dBm    ", rssi);
+  log_d("%s\n", broadcast ? "Broadcast" : "Unicast");
 
   if (!broadcast && !strncmp((const char *)data, (const char *)GATEWAY_QUERY, sizeof(GATEWAY_QUERY))) {
-    DEBUG_WARN(TAG, "Setting gateway address to " MACSTR, MAC2STR(address));
+    log_i("Setting gateway address to " MACSTR, MAC2STR(address));
     for (int i=0; i<6; i++) {
       gateway_address[i] = address[i];
     }
