@@ -10,7 +10,7 @@ void gotoSleep(long sleepTime, gpio_num_t wakeupPin, uint8_t level) {
 #define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
 
 #if 1
-  Serial.printf("Sleeping on pin %d at level %d\n", wakeupPin, level);
+  log_i("Sleeping on pin %d at level %d\n", wakeupPin, level);
   esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
   esp_sleep_enable_ext0_wakeup(wakeupPin, level);
 #if CORE_DEBUG_LEVEL > 0

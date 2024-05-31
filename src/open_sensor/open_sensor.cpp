@@ -1,19 +1,19 @@
 /**
  * Battery Powered Sensor to detect door/window openings, with light sensor
  * 
-                                          ___+3.3V
-                                            |
-                                           _|_ 
-                                          |4k7|
-                                          |_ _|
-                                            |
-LIGHT_SENSOR_PIN      ______________________|
-                                           _|_
-                                          |pho|
-                                          |to |
-                                          |_ _|
-                                            |
-                                            |
+                                          ___+3.3V    _______VBUS
+                                            |         |
+                                           _|_        \
+                                          |4k7|       /  20k
+                                          |_ _|       \
+                                            |         |
+LIGHT_SENSOR_PIN      ______________________|         |_____________ BATTERY_SENSOR_PIN
+                                           _|_        |
+                                          |pho|       \
+                                          |to |       /  20k
+                                          |_ _|       \
+                                            |         |
+                                            |__________
                                             |
                                             |
 LIGHT_SENSOR_CONROL_PIN __________________|/
@@ -99,7 +99,7 @@ void loop() {
   static uint8_t whoisretries = 0;
 
   digitalWrite(LIGHT_SENSOR_CONTROL_PIN, HIGH);
-  msg.batteryLevel = analogReadMilliVolts(BATTERY_SENSOR_PIN);
+  msg.batteryLevel = analogRead(BATTERY_SENSOR_PIN);
   log_d("batteryLevel = %d", msg.batteryLevel);
   msg.sensor1 = digitalRead(OPEN_SENSOR_PIN);
   msg.sensor2 = analogRead(LIGHT_SENSOR_PIN);
