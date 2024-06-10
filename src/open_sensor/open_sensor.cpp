@@ -106,7 +106,7 @@ void loop() {
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
     log_d(" Message sent: wakeCause = %d\n", msg.wakeupCause);
-    gotoSleep(600, OPEN_SENSOR_PIN, msg.sensor1 ? 0 : 1);
+    gotoSleep(8640, OPEN_SENSOR_PIN, msg.sensor1 ? 0 : 1);
   } else {
     log_d(" Message send failed\n");
     haveAddress = false;

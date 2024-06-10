@@ -6,7 +6,7 @@
 /**
  * gotoSleep - deep sleep until sleepTime or wakeupPin is set to level
 */
-void gotoSleep(long sleepTime, gpio_num_t wakeupPin, uint8_t level) {
+void gotoSleep(uint64_t sleepTime, gpio_num_t wakeupPin, uint8_t level) {
 #define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
 
 #if 1

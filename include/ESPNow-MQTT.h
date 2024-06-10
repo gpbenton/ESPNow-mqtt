@@ -36,7 +36,7 @@ int32_t getWiFiChannel(const char* ssid);
 void initAnalogPin(gpio_num_t pin, gpio_num_t control_pin);
 
 #if defined ESP32
-void gotoSleep(const long sleepTime, gpio_num_t wakeupPin, uint8_t level);
+void gotoSleep(const uint64_t sleepTime, gpio_num_t wakeupPin, uint8_t level);
 #endif
 
 #endif
