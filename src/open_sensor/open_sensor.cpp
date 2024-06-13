@@ -40,6 +40,7 @@ LIGHT_SENSOR_CONROL_PIN __________________|/
 
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
+const uint64_t SECS_IN_DAY = 60 * 60 * 24;
 const unsigned int WHOIS_RETRY_LIMIT = 5;
 RTC_DATA_ATTR int sharedChannel = 0;
 RTC_DATA_ATTR uint8_t gateway_address[6];
@@ -106,7 +107,7 @@ void loop() {
   msg.sensor3 = 0;
   if (haveAddress && !quickEspNow.send(gateway_address, (const unsigned char*)&msg, sizeof(msg))) {
     log_d(" Message sent: wakeCause = %d\n", msg.wakeupCause);
-    gotoSleep(8640, OPEN_SENSOR_PIN, msg.sensor1 ? 0 : 1);
+    gotoSleep(SECS_IN_DAY, OPEN_SENSOR_PIN, msg.sensor1 ? 0 : 1);
   } else {
     log_d(" Message send failed\n");
     haveAddress = false;
