@@ -22,6 +22,17 @@ void gotoSleep(uint64_t sleepTime, gpio_num_t wakeupPin, uint8_t level) {
   sleep(sleepTime);
 #endif
 }
+
+void sleepfor(uint64_t sleepTime) {
+#define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
+
+  log_i("Sleeping for %ld us\n", sleepTime);
+  esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
+#if CORE_DEBUG_LEVEL > 0
+  Serial.flush();
+#endif
+  esp_deep_sleep_start();
+}
 #endif // ESP 32
 
 void initAnalogPin(gpio_num_t pin, gpio_num_t control_pin) {

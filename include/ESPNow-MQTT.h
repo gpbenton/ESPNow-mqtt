@@ -37,6 +37,7 @@ void initAnalogPin(gpio_num_t pin, gpio_num_t control_pin);
 
 #if defined ESP32
 void gotoSleep(const uint64_t sleepTime, gpio_num_t wakeupPin, uint8_t level);
+void sleepfor(const uint64_t sleepTime);
 #endif
 
 #endif
