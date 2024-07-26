@@ -27,11 +27,13 @@ void sleepfor(uint64_t sleepTime) {
 #define uS_TO_S_FACTOR 1000000 /* Conversion factor for micro seconds to seconds */
 
   log_i("Sleeping for %ld us\n", sleepTime);
-  esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
 #if CORE_DEBUG_LEVEL > 0
   Serial.flush();
-#endif
+  sleep(5);
+#else
+  esp_sleep_enable_timer_wakeup(sleepTime * uS_TO_S_FACTOR);
   esp_deep_sleep_start();
+#endif
 }
 #endif // ESP 32
 

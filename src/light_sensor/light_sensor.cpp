@@ -107,7 +107,9 @@ void loop() {
   msg.sensor2 = analogRead(LIGHT_SENSOR_PIN);
   msg.sensor3 = 0;
 
-  if (abs(int64_t(msg.sensor2 - last_sent_light_level)) < MAX_DIFFERENCE) {
+  if (msg.wakeupCause == ESP_SLEEP_WAKEUP_TIMER
+      &&
+      (int64_t(msg.sensor2 - last_sent_light_level)) < MAX_DIFFERENCE) {
     log_d("No Message sent:  difference too small - %ld", msg.sensor2);
     sleepfor(WAIT_SECS);
   }
