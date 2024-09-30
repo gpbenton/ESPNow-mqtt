@@ -41,7 +41,8 @@ LIGHT_SENSOR_CONROL_PIN __________________|/
 // Send message every 2 seconds
 const unsigned int SEND_MSG_MSEC = 2000;
 const uint64_t WAIT_SECS = 60 * 5; // 5 minutes
-const unsigned int WHOIS_RETRY_LIMIT = 5;
+const unsigned int WHOIS_RETRY_LIMIT = 2;
+const unsigned int FIND_CHANNEL_RETRY_LIMIT = 3;
 RTC_DATA_ATTR int sharedChannel = 0;
 RTC_DATA_ATTR uint8_t gateway_address[6];
 bool haveAddress = false;
@@ -99,6 +100,7 @@ void setup() {
 
 void loop() {
   static uint8_t whoisretries = 0;
+  static uint8_t findchannelretries = 0;
 
   digitalWrite(LIGHT_SENSOR_CONTROL_PIN, HIGH);
   msg.batteryLevel = analogRead(BATTERY_SENSOR_PIN);
@@ -127,11 +129,16 @@ void loop() {
       log_d("Sending Gateway query\n");
       quickEspNow.send(ESPNOW_BROADCAST_ADDRESS, GATEWAY_QUERY, sizeof(GATEWAY_QUERY));
       whoisretries++;
-    } else {
+    } else if (findchannelretries < FIND_CHANNEL_RETRY_LIMIT) {
       // No gateway on this channel, look for the network id
       log_i("Searching for WiFi Channel\n");
       sharedChannel = getWiFiChannel(WIFI_SSID);
       whoisretries = 0;
+      findchannelretries++;
+    } else {
+      // Cannot find the channel so wait for next period
+      sharedChannel = 0;
+      sleepfor(WAIT_SECS);
     }
   }
 
