@@ -14,12 +14,12 @@ LIGHT_SENSOR_PIN      ______________________|         |_____________ BATTERY_SEN
                                           |_ _|       \
                                             |         |
                                             |__________
-                                            |
-                                            |
-LIGHT_SENSOR_CONROL_PIN __________________|/
-                                          |\e
-                                            |
-                                   _________|_GND
+                                            |                 _____ OPEN_SENSOR_PIN (Internal Pullup)
+                                            |                 |
+LIGHT_SENSOR_CONROL_PIN __________________|/                  |
+                                          |\e                  /  Magnetic REED switch
+                                            |                 /
+                                   _________|_GND_____________|
 
 */
 #include <Arduino.h>
